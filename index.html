@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APP Ubicación</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@4.5.2/dist/simplex/bootstrap.min.css"
+        integrity="sha384-FYrl2Nk72fpV6+l3Bymt1zZhnQFK75ipDqPXK0sOR0f/zeOSZ45/tKlsKucQyjSp" crossorigin="anonymous">
+    <!-- https://www.bootstrapcdn.com/bootswatch/ -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        #app {
+            text-align: center;
+            margin-top: 60px;
+            color: black;
+        }
+
+        .drop-zone {
+            width: 50%;
+            margin: 50px auto;
+            background-color: gray;
+            padding: 10px;
+            min-height: 10px;
+        }
+
+        .drag-element {
+            background-color: aqua;
+            color: black;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body id="app">
+
+    <div v-for="grupo in grupos" :key="grupo.agrupador" class="drop-zone" @drop="onDrop($event, grupo.agrupador)" @dragenter.prevent @dragover.prevent>
+        <input type="text" v-model="grupo.rfid">
+        <div v-for="item in getContenedoresGrupo(grupo.agrupador)" :key="item.contenedor" class="drag-element" draggable="true"  @dragstart="startDrag($event,item)">
+            {{item.contenedor}}
+        </div>
+    </div>
+
+    <!-- <div class="drop-zone" @drop="onDrop($event, 2)" @dragenter.prevent @dragover.prevent>
+        <div v-for="item in getContenedoresGrupo(2)" :key="item.contenedor" class="drag-element" draggable="true" @dragstart="startDrag($event,item)">
+            {{item.contenedor}}
+        </div>
+    </div> -->
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+        crossorigin="anonymous"></script>
+
+    <script src="https://unpkg.com/vue@3"></script>
+    <script>
+        Vue.createApp({
+            data() {
+                return {
+                    "descarga": [
+                        { "contenedor": 11111, "agrupador": 1 },
+                        { "contenedor": 22222, "agrupador": 1 },
+                        { "contenedor": 33333, "agrupador": 2 },
+                    ], 
+                    "grupos": [
+                        {"agrupador": 1, "rfid": ""},
+                        {"agrupador": 2, "rfid": ""},
+                    ]
+                }
+            },
+            methods: {
+                getContenedoresGrupo(val) {
+                    return this.descarga.filter(c => c.agrupador == val)
+                },
+
+                getUniqueGroups() {
+                    console.log(new Set(this.descarga.map(e=>(e.agrupador))))                    
+                },
+
+                startDrag(event, item) {
+                    event.dataTransfer.dropEffect = 'move'
+                    event.dataTransfer.effectAllowed = 'move'
+                    event.dataTransfer.setData('contenedor', item.contenedor)
+                },
+                
+                onDrop(event, grupo) {
+                    const contenedor = event.dataTransfer.getData('contenedor')
+                    const result= this.descarga.filter(r=>r.contenedor==contenedor)
+                    const i = this.descarga.indexOf(result[0])
+                    result[0].agrupador = grupo
+                    this.descarga[i] = result[0]                    
+                }
+
+            },
+            mounted() {
+                this.getUniqueGroups()
+            },
+            watch: {
+            }
+        }).mount('#app')
+    </script>
+
+</body>
