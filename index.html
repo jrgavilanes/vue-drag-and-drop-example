@@ -40,42 +40,39 @@
 
         <div v-for="grupo in bd.grupos" :key="grupo.agrupador" class="drop-zone" @drop="onDrop($event, grupo.agrupador)"
             @dragenter.prevent @dragover.prevent>
-            <h3 v-if="grupo.agrupador!=999">Grupo {{grupo.agrupador}}</h3>
-            <h3 v-if="grupo.agrupador==999">Contenedores sin agrupar</h3>
-            <h3 v-if="grupo.agrupador==999"><button @click="newGroup()" class="btn btn-primary">Crear grupo</button>
-            </h3>
-            <input v-if="grupo.agrupador!=999" placeholder="Introducir RFID" type="text" v-model="grupo.rfid">
-            <hr>
+            
+            <div v-if="grupo.agrupador==999">
+                <h3>Contenedores sin agrupar</h3>
+                <p><button @click="newGroup()" class="btn btn-primary">Crear grupo</button></p>
+                <hr>
+            </div>
+
+            <div v-if="grupo.agrupador!=999">
+                <h3>Grupo {{grupo.agrupador}}</h3>            
+                <input placeholder="Introducir RFID" type="text" v-model="grupo.rfid"><button @click="closeGroup(grupo.agrupador,grupo.rfid)" v-if="grupo.rfid.length>0">Cerrar contenedor</button>
+                <hr>
+            </div>
+
+            
             <div v-for="item in getContenedoresGrupo(grupo.agrupador)" :key="item.contenedor" class="drag-element"
                 draggable="true" @dragstart="startDrag($event,item)">
                 {{item.contenedor}}
             </div>
+
         </div>
 
         <div class="container">
             <!-- Visor JSON -->
             <div class="col-12">
                 <div class="form-group">
-                    <button class=".btn btn-primary" @click="updateVisorBD()"><i class="bi bi-arrow-clockwise"></i></button>
+                    <button class=".btn btn-primary" @click="printExpedition()"><i class="bi bi-arrow-clockwise"></i></button>
                     <label for="VisorBD" class="form-label mt-4">Visor de BD {{jsonError}}</label>
-                    <textarea class="form-control" id="VisorBD" v-model="baseDatosJson" rows="35"></textarea>
+                    <textarea class="form-control" id="VisorBD" v-model="baseDatosJson2" rows="35"></textarea>
                 </div>
             </div>
         </div>
 
-
     </div>
-
-
-
-
-
-
-    <!-- <div class="drop-zone" @drop="onDrop($event, 2)" @dragenter.prevent @dragover.prevent>
-        <div v-for="item in getContenedoresGrupo(2)" :key="item.contenedor" class="drag-element" draggable="true" @dragstart="startDrag($event,item)">
-            {{item.contenedor}}
-        </div>
-    </div> -->
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
@@ -90,18 +87,17 @@
                     "bd": {
                         "nextGroup": 0,
                         "descarga": [
-                            { "contenedor": 11111, "agrupador": 1 },
-                            { "contenedor": 22222, "agrupador": 1 },
-                            { "contenedor": 33333, "agrupador": 2 },
-                            { "contenedor": 44444, "agrupador": 3 },
-                            { "contenedor": 55555, "agrupador": 999 },
+                            { "contenedor": 11111, "agrupador": 1, "rfid": "" },
+                            { "contenedor": 22222, "agrupador": 1, "rfid": "" },
+                            { "contenedor": 33333, "agrupador": 2, "rfid": "" },
+                            { "contenedor": 44444, "agrupador": 3, "rfid": "" },
+                            { "contenedor": 55555, "agrupador": 999, "rfid": "" },
                         ],
                         "grupos": [
                             { "agrupador": 1, "rfid": "" },
                             { "agrupador": 2, "rfid": "" },
                         ]
-                    },
-                    "baseDatosJson" : {}
+                    },                    
                 }
             },
             methods: {
@@ -110,18 +106,10 @@
                 },
 
                 getUniqueGroups() {
-                    let groups = new Set(this.bd.descarga.map(e => (e.agrupador)))
+                    // let groups = new Set(this.bd.descarga.map(e => (e.agrupador)))
+                    let groups = new Set(this.bd.descarga.filter(c => c.rfid == "").map(e => (e.agrupador)))
                     groups = [...groups].sort()
                     groups.reverse()
-
-                    if (groups[0] == 999) {
-                        this.bd.nextGroup = groups[1] + 1
-                    } else {
-                        this.bd.nextGroup = groups[0] + 1
-                    }
-
-                    // if (isNaN(this.nextGroup)) this.nextGroup = 1
-
 
                     console.log("grupos", groups)
                     this.bd.grupos = []
@@ -138,7 +126,41 @@
                     this.updateVisorBD()
 
                 },
+                closeGroup(group, rfid) {
 
+                    this.bd.descarga.forEach(
+                        e => {
+                            if (e.agrupador==group) e.rfid = rfid
+                        }
+                    );
+
+                    this.getUniqueGroups()
+
+                },
+
+                printExpedition() {
+                    let result = {}
+                    this.bd.descarga.forEach(
+                        e => {
+                            console.log("pues", e.rfid)
+                            if (e.rfid != "") {                                
+                                try {
+                                    result[e.rfid].rfid = e.rfid
+                                    result[e.rfid].contenedores.push(e.contenedor)
+                                } catch (error) {
+                                    result[e.rfid] = {}
+                                    result[e.rfid].rfid = e.rfid
+                                    result[e.rfid].contenedores=[]
+                                    result[e.rfid].contenedores.push(e.contenedor)
+                                }    
+                            }                                                        
+                        }
+                    );
+                    console.log("resultado", result)
+                    alert(JSON.stringify(result, null, 4))
+
+                    
+                },
                 startDrag(event, item) {
                     event.dataTransfer.dropEffect = 'move'
                     event.dataTransfer.effectAllowed = 'move'
@@ -156,11 +178,15 @@
                 },
 
                 newGroup() {
-                    this.bd.grupos.splice(1, 0, { "agrupador": this.bd.nextGroup, "rfid": "" })
+                    this.bd.grupos.splice(1, 0, { "agrupador": this.getMaxGroup(), "rfid": "" })
                 },
 
                 getMaxGroup() {
-
+                    let maximo = 0
+                    this.bd.descarga.forEach(element => {
+                        if (element.agrupador>maximo && element.agrupador<999) maximo = element.agrupador
+                    });
+                    return ++maximo
                 },
                 updateVisorBD() {
                     this.baseDatosJson = JSON.stringify(this.bd, null, 4)
@@ -170,10 +196,12 @@
             mounted() {
                 this.getUniqueGroups()
             },
-            watch: {
-                // bd: function() {
-                //     this.baseDatosJson = JSON.stringify(this.bd, null, 4)
-                // }
+            watch: {                
+            },
+            computed: {                
+                baseDatosJson2: function () {                
+                    return JSON.stringify(this.bd, null, 4)
+                }
             }
         }).mount('#app')
     </script>
