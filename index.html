@@ -36,12 +36,21 @@
 
 <body id="app">
 
-    <div v-for="grupo in grupos" :key="grupo.agrupador" class="drop-zone" @drop="onDrop($event, grupo.agrupador)" @dragenter.prevent @dragover.prevent>
-        <input type="text" v-model="grupo.rfid">
-        <div v-for="item in getContenedoresGrupo(grupo.agrupador)" :key="item.contenedor" class="drag-element" draggable="true"  @dragstart="startDrag($event,item)">
+    <div v-for="grupo in grupos" :key="grupo.agrupador" class="drop-zone" @drop="onDrop($event, grupo.agrupador)"
+        @dragenter.prevent @dragover.prevent>
+        <h3 v-if="grupo.agrupador!=999">Grupo {{grupo.agrupador}}</h3>
+        <h3 v-if="grupo.agrupador==999">Contenedores sin agrupar</h3>
+        <h3 v-if="grupo.agrupador==999"><button @click="newGroup()" class="btn btn-primary">Crear grupo</button></h3>
+        <input v-if="grupo.agrupador!=999" placeholder="Introducir RFID" type="text" v-model="grupo.rfid">
+        <hr>
+        <div v-for="item in getContenedoresGrupo(grupo.agrupador)" :key="item.contenedor" class="drag-element"
+            draggable="true" @dragstart="startDrag($event,item)">
             {{item.contenedor}}
         </div>
     </div>
+
+
+
 
     <!-- <div class="drop-zone" @drop="onDrop($event, 2)" @dragenter.prevent @dragover.prevent>
         <div v-for="item in getContenedoresGrupo(2)" :key="item.contenedor" class="drag-element" draggable="true" @dragstart="startDrag($event,item)">
@@ -59,14 +68,17 @@
         Vue.createApp({
             data() {
                 return {
+                    "nextGroup": 0,
                     "descarga": [
                         { "contenedor": 11111, "agrupador": 1 },
                         { "contenedor": 22222, "agrupador": 1 },
                         { "contenedor": 33333, "agrupador": 2 },
-                    ], 
+                        { "contenedor": 44444, "agrupador": 3 },
+                        { "contenedor": 55555, "agrupador": 999 },
+                    ],
                     "grupos": [
-                        {"agrupador": 1, "rfid": ""},
-                        {"agrupador": 2, "rfid": ""},
+                        { "agrupador": 1, "rfid": "" },
+                        { "agrupador": 2, "rfid": "" },
                     ]
                 }
             },
@@ -76,7 +88,26 @@
                 },
 
                 getUniqueGroups() {
-                    console.log(new Set(this.descarga.map(e=>(e.agrupador))))                    
+                    let groups = new Set(this.descarga.map(e => (e.agrupador)))
+                    groups = [...groups].sort()
+                    groups.reverse()
+
+                    this.nextGroup = groups[1] + 1
+                    if (isNaN(this.nextGroup)) this.nextGroup = 1
+
+
+                    console.log("grupos", groups)
+                    this.grupos = []
+                    for (const group of groups) {
+                        console.log("entro")
+                        this.grupos.push({ "agrupador": group, "rfid": "" })
+                        console.log("dentro", this.grupos)
+                    }
+                    const result = this.grupos.filter(r => r.agrupador == 999)
+                    if (result.length == 0) {
+                        this.grupos.unshift({ "agrupador": 999, "rfid": "" })
+                    }
+
                 },
 
                 startDrag(event, item) {
@@ -84,13 +115,23 @@
                     event.dataTransfer.effectAllowed = 'move'
                     event.dataTransfer.setData('contenedor', item.contenedor)
                 },
-                
+
                 onDrop(event, grupo) {
                     const contenedor = event.dataTransfer.getData('contenedor')
-                    const result= this.descarga.filter(r=>r.contenedor==contenedor)
+                    const result = this.descarga.filter(r => r.contenedor == contenedor)
                     const i = this.descarga.indexOf(result[0])
                     result[0].agrupador = grupo
-                    this.descarga[i] = result[0]                    
+                    this.descarga[i] = result[0]
+
+                    this.getUniqueGroups()
+                },
+
+                newGroup() {
+                    this.grupos.splice(1, 0, { "agrupador": this.nextGroup, "rfid": "" })
+                },
+
+                getMaxGroup() {
+
                 }
 
             },
